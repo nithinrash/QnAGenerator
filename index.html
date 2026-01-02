@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Hurup (Hybrid Engine)</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { brand: { DEFAULT: '#111', accent: '#10b981' } },
+                    boxShadow: { card: '0 8px 24px rgba(0,0,0,.06)' },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent
+        }
+
+        .dark * {
+            scrollbar-color: #374151 transparent
+        }
+
+        ::-webkit-scrollbar {
+            height: 8px;
+            width: 8px
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #374151
+        }
+
+        pre code {
+            white-space: pre-wrap;
+            word-wrap: break-word
+        }
+
+        #gameCanvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+
+<body class="h-full bg-white text-black dark:bg-neutral-950 dark:text-neutral-100 transition-colors">
+
+    <div class="min-h-full grid grid-rows-[auto,1fr,auto]">
+        <header
+            class="border-b border-neutral-200 dark:border-neutral-800 sticky top-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur z-20">
+            <div class="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <svg class="w-6 h-6 text-brand-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                    <h1 class="font-semibold tracking-tight">Hurup Generator <span
+                            class="text-xs px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium">Hybrid
+                            Logic</span></h1>
+                </div>
+                <div class="ml-auto">
+                    <button id="btn-theme"
+                        class="p-2 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900"
+                        title="Toggle theme">
+                        <svg class="h-5 w-5 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="4" />
+                            <path
+                                d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+                        </svg>
+                        <svg class="h-5 w-5 hidden dark:block" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-3xl mx-auto w-full px-4 py-6">
+            <div id="chat" class="space-y-4"></div>
+        </main>
+
+        <footer
+            class="sticky bottom-0 bg-gradient-to-t from-white dark:from-neutral-950 via-white/90 dark:via-neutral-950/90 to-transparent z-30">
+            <div class="max-w-3xl mx-auto px-4 pt-2 pb-6">
+                <div
+                    class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-2 shadow-card">
+                    <div class="flex items-end gap-2">
+                        <textarea id="input" rows="1" placeholder='Type a topic (e.g., "Karnataka Politics")'
+                            class="flex-1 resize-none bg-transparent px-3 py-2 outline-none placeholder-neutral-400"></textarea>
+                        <button id="btn-send"
+                            class="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:opacity-95 transition-opacity">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M2 21l21-9L2 3l3 7 10 2-10 2z" />
+                            </svg>
+                            <span>Generate</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <div id="game-overlay" class="fixed inset-0 z-50 bg-neutral-900 hidden flex flex-col font-sans">
+        <div class="absolute top-4 right-4 z-[100]">
+            <button onclick="closeGame()"
+                class="bg-white/10 hover:bg-white/20 text-white rounded-full p-2 backdrop-blur-md transition">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="relative w-full h-full overflow-hidden">
+            <canvas id="gameCanvas"
+                class="absolute inset-0 z-10 w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+            <div id="game-ui-layer" class="absolute inset-0 z-20 pointer-events-none overflow-hidden select-none">
+                <div id="game-flags-container"
+                    class="absolute inset-0 w-full h-full opacity-0 transition-opacity duration-500"></div>
+                <div id="game-selection-box"
+                    class="absolute z-50 hidden border-2 border-white/70 rounded-xl bg-white/15 shadow-[0_0_15px_rgba(255,255,255,0.2)] transition-all duration-300 pointer-events-none">
+                </div>
+                <div class="absolute top-4 left-4 max-w-[280px] p-4 rounded-2xl shadow-lg bg-white/90 backdrop-blur-sm pointer-events-auto transition-all border border-neutral-200"
+                    id="game-q-panel">
+                    <div id="game-q-text" class="text-slate-900 text-sm font-bold leading-snug">Drag wheel to spin...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="tpl-user">
+        <div class="flex gap-3 items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div
+                class="shrink-0 rounded-full h-8 w-8 flex items-center justify-center border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm7 9a7 7 0 0 0-14 0Z" />
+                </svg>
+            </div>
+            <div class="grow">
+                <div
+                    class="rounded-2xl px-4 py-3 border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900">
+                    <div class="text-sm leading-6"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+    <template id="tpl-assistant-json">
+        <div class="flex gap-3 items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div
+                class="shrink-0 rounded-full h-8 w-8 flex items-center justify-center border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                <svg class="h-4 w-4 text-brand-accent" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M4 4h16v16H4z" />
+                </svg>
+            </div>
+            <div class="grow">
+                <div
+                    class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden shadow-card">
+                    <div class="p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs text-neutral-500 font-medium">Wheel JSON (Hybrid Generated)</div>
+                        </div>
+                        <pre
+                            class="bg-neutral-50 dark:bg-neutral-900 p-3 rounded-lg overflow-auto max-h-72 border border-neutral-100 dark:border-neutral-800"><code class="text-xs font-mono text-neutral-600 dark:text-neutral-300" data-json></code></pre>
+                    </div>
+                    <div
+                        class="p-2 border-t border-neutral-200 dark:border-neutral-800 flex gap-2 flex-wrap bg-neutral-50/50 dark:bg-neutral-900/50">
+                        <button
+                            class="btn-copy-json px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 text-xs hover:bg-white dark:hover:bg-neutral-800 transition-colors">Copy
+                            JSON</button><button
+                            class="btn-download-json px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 text-xs hover:bg-white dark:hover:bg-neutral-800 transition-colors">Download
+                            .json</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    <template id="tpl-thinking">
+        <div class="flex gap-3 items-start animate-pulse">
+            <div class="shrink-0 rounded-full h-8 w-8 bg-neutral-200 dark:bg-neutral-800"></div>
+            <div class="grow">
+                <div class="h-8 rounded-2xl bg-neutral-200 dark:bg-neutral-800 w-1/3"></div>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        /* ===================== CONFIG ===================== */
+        const OR_API_KEY = "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";
+
+        // Failover Models (Free Tier)
+        const OR_MODELS = [
+            "google/gemini-2.0-flash-exp:free",
+            "meta-llama/llama-3.2-11b-vision-instruct:free",
+            "mistralai/mistral-7b-instruct:free",
+            "microsoft/phi-3-medium-128k-instruct:free"
+        ];
+
+        const SITE_URL = "http://localhost:5500";
+        const SITE_NAME = "Hurup Hybrid";
+
+        /* ===================== AI LOGIC ===================== */
+        const $ = s => document.querySelector(s);
+        const chat = $('#chat');
+
+        async function getSimpleContent(topic) {
+            // We only ask for the content (16 Qs, 16 As, 8 Decoys). No complex logic.
+            const prompt = `
+        You are a Quiz Content Generator.
+        Topic: "${topic}"
+        
+        Output a valid JSON object with:
+        1. "items": Exactly 16 objects. Each must have:
+           - "key": Unique 1-word identifier (CamelCase, <12 chars).
+           - "q": The question (10-15 words).
+           - "a": The short answer (1-3 words).
+        2. "decoys": Exactly 8 strings (wrong answers relevant to the topic).
+        
+        Ensure all answers and decoys are unique. Output ONLY raw JSON.
+        `;
+
+            let lastError = null;
+
+            // Failover Loop
+            for (const model of OR_MODELS) {
+                try {
+                    // UI Feedback
+                    const thinking = document.querySelector('[data-thinking="1"]');
+                    if (thinking) thinking.textContent = `Trying model: ${model.split('/')[1]}...`;
+
+                    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${OR_API_KEY}`,
+                            "HTTP-Referer": SITE_URL,
+                            "X-Title": SITE_NAME,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [{ role: "user", content: prompt }],
+                            temperature: 0.3,
+                            response_format: { type: "json_object" }
+                        })
+                    });
+
+                    if (res.status === 429 || res.status === 503) continue; // Busy, try next
+                    if (!res.ok) throw new Error((await res.json()).error?.message || "Error");
+
+                    const data = await res.json();
+                    return data.choices[0].message.content; // Success
+
+                } catch (err) {
+                    console.error(err);
+                    lastError = err;
+                }
+            }
+            throw new Error("All models busy. Please wait 1 minute and try again.");
+        }
+
+        /* ===================== HYBRID ASSEMBLER (The Magic) ===================== */
+        function assembleGameData(jsonString) {
+            // 1. Parse the simple JSON from AI
+            let clean = jsonString;
+            if (clean.includes('```json')) clean = clean.split('```json')[1].split('```')[0];
+            else if (clean.includes('```')) clean = clean.split('```')[1].split('```')[0];
+
+            const simpleData = JSON.parse(clean);
+
+            // Validate
+            if (!simpleData.items || simpleData.items.length < 16) throw new Error("AI generated too few items");
+
+            // 2. Build Core QAS Array
+            const qas = simpleData.items.slice(0, 16).map(item => ({
+                key: item.key.replace(/[^a-zA-Z]/g, '').slice(0, 11) || "Key",
+                question: item.q,
+                answer: item.a
+            }));
+
+            // 3. Build innerOrder (Sequence)
+            const innerOrder = qas.map(q => q.key);
+
+            // 4. Build printOrder (Shuffled)
+            const printOrder = [...innerOrder].sort(() => Math.random() - 0.5);
+
+            // 5. Build outerFlags (The Complex Logic)
+            const outerFlags = new Array(24).fill(null);
+            const decoys = simpleData.decoys || [];
+            // Fill missing decoys if AI failed
+            while (decoys.length < 8) decoys.push("Decoy");
+
+            // Apply Circular Logic: Pair i and i+8 use slots (i+7), (i+15), (i+23) modulo 24
+            for (let i = 0; i < 8; i++) {
+                const ans1 = qas[i].answer;
+                const ans2 = qas[i + 8].answer;
+                const decoy = decoys[i];
+
+                // 0-indexed slots based on your rule
+                let slots = [
+                    (i + 7) % 24,
+                    (i + 15) % 24,
+                    (i + 23) % 24
+                ];
+
+                // Randomize placement
+                const content = [ans1, ans2, decoy].sort(() => Math.random() - 0.5);
+
+                outerFlags[slots[0]] = content[0];
+                outerFlags[slots[1]] = content[1];
+                outerFlags[slots[2]] = content[2];
+            }
+
+            // Fill any nulls (safeguard)
+            for (let k = 0; k < 24; k++) { if (!outerFlags[k]) outerFlags[k] = "Error"; }
+
+            return { qas, innerOrder, printOrder, outerFlags };
+        }
+
+        /* ===================== UI HANDLERS ===================== */
+        function renderThinking() {
+            const tpl = $('#tpl-thinking').content.cloneNode(true);
+            const node = tpl.firstElementChild;
+            node.dataset.thinking = "1";
+            chat.appendChild(node);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function removeThinking() {
+            const n = document.querySelector('[data-thinking="1"]');
+            if (n) n.remove();
+        }
+
+        function renderJSON(obj) {
+            const tpl = $('#tpl-assistant-json').content.cloneNode(true);
+            const node = tpl.firstElementChild;
+            node.querySelector('[data-json]').textContent = JSON.stringify(obj, null, 2);
+
+            // Add Play Button
+            const playBtn = document.createElement('button');
+            playBtn.className = "px-3 py-1.5 rounded-lg bg-brand-accent text-white text-xs hover:opacity-90 flex items-center gap-1 shadow-sm";
+            playBtn.innerHTML = `<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Play Preview`;
+            playBtn.onclick = () => launchGame(obj);
+            node.querySelector('.btn-download-json').parentNode.appendChild(playBtn);
+
+            // Copy/Download handlers
+            node.querySelector('.btn-copy-json').onclick = async () => {
+                await navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
+            };
+
+            chat.appendChild(node);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function renderUser(text) {
+            const tpl = $('#tpl-user').content.cloneNode(true);
+            tpl.querySelector('.text-sm').textContent = text;
+            chat.appendChild(tpl);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        $('#input').addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#btn-send').click(); }
+        });
+
+        $('#btn-send').onclick = async () => {
+            if (!OR_API_KEY || OR_API_KEY.includes("PASTE_")) { alert("Paste OpenRouter API Key first."); return; }
+
+            const text = $('#input').value.trim();
+            if (!text) return;
+
+            renderUser(text);
+            $('#input').value = '';
+            renderThinking();
+
+            try {
+                // 1. Get Simple Content from AI
+                const rawAI = await getSimpleContent(text);
+
+                // 2. Assemble Logic with JS
+                const finalJSON = assembleGameData(rawAI);
+
+                // 3. Render
+                removeThinking();
+                renderJSON(finalJSON);
+
+            } catch (e) {
+                removeThinking();
+                const div = document.createElement('div');
+                div.className = "text-red-500 text-sm px-4";
+                div.textContent = "Error: " + e.message;
+                chat.appendChild(div);
+            }
+        };
+
+        /* ===================== GAME ENGINE (Canvas) ===================== */
+        // ... (Game Engine Code kept identical to ensure it plays the JSON correctly)
+        let gameLoopId = null;
+        function closeGame() {
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+            document.getElementById('game-overlay').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        function launchGame(jsonData) {
+            if (!jsonData) return;
+            const overlay = document.getElementById('game-overlay');
+            overlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            initGameEngine(jsonData);
+        }
+        function initGameEngine(data) {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            let w, h, minDim, cx, cy, geom;
+            const innerItems = data.innerOrder;
+            const outerItems = data.outerFlags;
+            const qaMap = {};
+            data.qas.forEach(q => { qaMap[q.key] = { q: q.question, a: q.answer }; });
+            const state = { gearAngle: 0, ringAngle: 0, velocity: 0, isDragging: false, lastDragAngle: 0, roundStarted: false };
+            const RING_TEETH = 24, GEAR_TEETH = 16, GEAR_RATIO = 1.5;
+
+            function resize() {
+                w = window.innerWidth; h = window.innerHeight;
+                canvas.width = w; canvas.height = h;
+                minDim = Math.min(w, h); cx = w / 2; cy = h / 2;
+                const ringR = minDim * 0.42; const toothH = minDim * 0.05;
+                geom = {
+                    ringOuter: ringR, ringRoot: ringR - minDim * 0.07, ringTip: ringR - minDim * 0.07 - toothH,
+                    gearRoot: (ringR - minDim * 0.07 - toothH / 2) * (2 / 3) - toothH / 2,
+                    gearTip: ((ringR - minDim * 0.07 - toothH / 2) * (2 / 3) - toothH / 2) + toothH,
+                    ringCenter: { x: cx, y: cy },
+                    gearCenter: { x: cx + ((ringR - minDim * 0.07 - toothH / 2) * (1 / 3)) * Math.cos(10 * Math.PI / 180), y: cy + ((ringR - minDim * 0.07 - toothH / 2) * (1 / 3)) * Math.sin(10 * Math.PI / 180) }
+                };
+                updateDomPositions();
+            }
+            const polar = (c, r, a) => ({ x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) });
+            function drawGearPath(ctx, center, teeth, rootR, tipR, isInternal) {
+                const pitch = (2 * Math.PI) / teeth; const topFrac = 0.45;
+                const rBase = isInternal ? tipR : rootR; const rExt = isInternal ? rootR : tipR;
+                ctx.beginPath(); const startP = polar(center, rBase, -pitch / 2); ctx.moveTo(startP.x, startP.y);
+                for (let i = 0; i < teeth; i++) {
+                    const a = i * pitch; const flank = (pitch * (1 - topFrac)) / 2;
+                    const a1 = a - pitch / 2, a2 = a - pitch / 2 + flank, a3 = a - (pitch * topFrac) / 2, a4 = a + (pitch * topFrac) / 2, a5 = a + pitch / 2 - flank;
+                    ctx.arc(center.x, center.y, rBase, a1, a2);
+                    const cp1 = polar(center, (rBase + rExt) / 2, a2); const tip1 = polar(center, rExt, a3);
+                    ctx.quadraticCurveTo(cp1.x, cp1.y, tip1.x, tip1.y);
+                    ctx.arc(center.x, center.y, rExt, a3, a4);
+                    const cp2 = polar(center, (rBase + rExt) / 2, a5); const base2 = polar(center, rBase, a5);
+                    ctx.quadraticCurveTo(cp2.x, cp2.y, base2.x, base2.y);
+                }
+                ctx.closePath();
+            }
+            function render() {
+                ctx.clearRect(0, 0, w, h);
+                // Ring
+                ctx.save(); ctx.translate(cx, cy); ctx.beginPath();
+                ctx.arc(0, 0, geom.ringOuter, 0, Math.PI * 2); ctx.arc(0, 0, geom.ringRoot, 0, Math.PI * 2, true);
+                ctx.fillStyle = '#1565C0'; ctx.fill();
+                ctx.rotate(state.ringAngle + (15 * Math.PI / 180));
+                ctx.fillStyle = '#102A44'; ctx.beginPath(); ctx.arc(0, 0, geom.ringRoot, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#1976D2'; drawGearPath(ctx, { x: 0, y: 0 }, RING_TEETH, geom.ringRoot, geom.ringTip, true); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.restore();
+                // Gear
+                ctx.save(); ctx.translate(geom.gearCenter.x, geom.gearCenter.y); ctx.rotate(state.gearAngle);
+                ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 15;
+                const grad = ctx.createRadialGradient(0, 0, geom.gearRoot * 0.2, 0, 0, geom.gearTip);
+                grad.addColorStop(0, '#FFD54F'); grad.addColorStop(1, '#FF6F00');
+                ctx.fillStyle = grad; drawGearPath(ctx, { x: 0, y: 0 }, GEAR_TEETH, geom.gearRoot, geom.gearTip, false); ctx.fill();
+                ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
+                // Text
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#000';
+                const textR = geom.gearRoot * 0.75; const step = (2 * Math.PI) / GEAR_TEETH;
+                innerItems.forEach((label, i) => {
+                    ctx.save(); const theta = i * step; ctx.rotate(theta); ctx.translate(textR, 0);
+                    const global = (state.gearAngle + theta) % (Math.PI * 2); const norm = global < 0 ? global + Math.PI * 2 : global;
+                    if (norm > Math.PI / 2 && norm < 3 * Math.PI / 2) ctx.rotate(Math.PI);
+                    ctx.fillText(label, 0, 0); ctx.restore();
+                });
+                ctx.restore();
+            }
+            function updateDomPositions() {
+                const container = document.getElementById('game-flags-container');
+                if (container.children.length !== outerItems.length) {
+                    container.innerHTML = '';
+                    outerItems.forEach(txt => {
+                        const el = document.createElement('div');
+                        el.className = 'absolute bg-white border-2 border-blue-800 rounded px-2 py-1 text-xs font-bold text-blue-900 shadow whitespace-nowrap pointer-events-none transform -translate-x-1/2 -translate-y-12';
+                        el.innerText = txt; container.appendChild(el);
+                    });
+                }
+                if (!geom) return;
+                const r = geom.ringTip * 1.38; const phase = state.ringAngle + (15 * Math.PI / 180); const step = (2 * Math.PI) / RING_TEETH;
+                Array.from(container.children).forEach((el, i) => {
+                    const a = i * step + phase; const x = cx + r * Math.cos(a); const y = cy + r * Math.sin(a);
+                    el.style.left = x + 'px'; el.style.top = y + 'px';
+                    const deg = (a * 180 / Math.PI) + 90; el.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
+                });
+            }
+            function updateUi() {
+                const contactAng = 10 * Math.PI / 180; const step = (Math.PI * 2) / GEAR_TEETH;
+                let norm = state.gearAngle % (Math.PI * 2); if (norm < 0) norm += Math.PI * 2;
+                const rawIdx = (contactAng - state.gearAngle) / step; let idx = Math.round(rawIdx) % GEAR_TEETH; if (idx < 0) idx += GEAR_TEETH;
+                const key = innerItems[idx]; const qData = qaMap[key];
+                const qPanel = document.getElementById('game-q-text');
+                const box = document.getElementById('game-selection-box');
+                if (!state.roundStarted && qData) {
+                    qPanel.innerText = qData.q;
+                    const diff = Math.abs(rawIdx - Math.round(rawIdx));
+                    if (diff < 0.15) {
+                        box.style.display = 'block';
+                        const r = geom.gearRoot;
+                        const bx = geom.gearCenter.x + r * Math.cos(contactAng); const by = geom.gearCenter.y + r * Math.sin(contactAng);
+                        box.style.left = (bx - 80) + 'px'; box.style.top = (by - 30) + 'px'; box.style.width = '160px'; box.style.height = '60px';
+                    } else { box.style.display = 'none'; }
+                }
+                window.onkeydown = (e) => {
+                    if (e.key.toLowerCase() === 's') {
+                        if (!state.roundStarted) {
+                            state.roundStarted = true;
+                            document.getElementById('game-flags-container').classList.remove('opacity-0');
+                            document.getElementById('game-hint-box').style.opacity = '0';
+                        } else {
+                            state.roundStarted = false;
+                            document.getElementById('game-flags-container').classList.add('opacity-0');
+                            document.getElementById('game-hint-box').style.opacity = '1';
+                            const res = document.getElementById('game-result-overlay');
+                            res.classList.remove('hidden', 'opacity-0');
+                            document.getElementById('game-res-emoji').innerText = "👀";
+                            document.getElementById('game-res-msg').innerText = "CHECKED";
+                            setTimeout(() => res.classList.add('hidden', 'opacity-0'), 1500);
+                        }
+                    }
+                    if (e.key === 'Escape') closeGame();
+                };
+            }
+            function getAng(e) { const x = e.touches ? e.touches[0].clientX : e.clientX; const y = e.touches ? e.touches[0].clientY : e.clientY; return Math.atan2(y - cy, x - cx); }
+            canvas.onmousedown = canvas.ontouchstart = (e) => { state.isDragging = true; state.lastDragAngle = getAng(e); state.velocity = 0; };
+            window.onmousemove = window.ontouchmove = (e) => {
+                if (!state.isDragging) return;
+                const ang = getAng(e); let delta = ang - state.lastDragAngle;
+                if (delta > Math.PI) delta -= Math.PI * 2; if (delta < -Math.PI) delta += Math.PI * 2;
+                state.ringAngle += delta; state.gearAngle = state.ringAngle * -GEAR_RATIO;
+                state.lastDragAngle = ang; state.velocity = delta;
+                updateDomPositions(); updateUi();
+            };
+            window.onmouseup = window.ontouchend = () => state.isDragging = false;
+            function loop() {
+                if (!state.isDragging && Math.abs(state.velocity) > 0.001) {
+                    state.velocity *= 0.95; state.ringAngle += state.velocity; state.gearAngle = state.ringAngle * -GEAR_RATIO;
+                    updateDomPositions(); updateUi();
+                }
+                render(); gameLoopId = requestAnimationFrame(loop);
+            }
+            resize(); window.onresize = resize;
+            if (gameLoopId) cancelAnimationFrame(gameLoopId); loop();
+        }
+
+        (function () {
+            const THEME = 'qa_theme';
+            function applyTheme() { document.documentElement.classList.toggle('dark', (localStorage.getItem(THEME) || 'light') === 'dark'); }
+            applyTheme();
+            $('#btn-theme').onclick = () => { const t = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; localStorage.setItem(THEME, t === 'dark' ? 'light' : 'dark'); applyTheme(); };
+            renderUser('Hybrid Engine Ready. Type a topic!');
+        })();
+    </script>
+</body>
+
+</html>
